@@ -325,7 +325,10 @@ var ValidatorContext = function ValidatorContext(parent, collectMultiple, errorR
 	this.schemas = parent ? Object.create(parent.schemas) : {};
 	this.collectMultiple = collectMultiple;
 	this.errors = [];
+	this.requireds = [];
 	this.handleError = collectMultiple ? this.collectError : this.returnError;
+	this.handleRequired = this.collectRequired;
+	
 	if (checkRecursive) {
 		this.checkRecursive = true;
 		this.scanned = [];
@@ -366,6 +369,12 @@ ValidatorContext.prototype.returnError = function (error) {
 ValidatorContext.prototype.collectError = function (error) {
 	if (error) {
 		this.errors.push(error);
+	}
+	return null;
+};
+ValidatorContext.prototype.collectRequired = function (required) {
+	if (required) {
+		this.requireds.push(required);
 	}
 	return null;
 };
@@ -529,6 +538,7 @@ ValidatorContext.prototype.reset = function () {
 	this.missing = [];
 	this.missingMap = {};
 	this.errors = [];
+	this.requireds = [];
 };
 
 ValidatorContext.prototype.validateAll = function (data, schema, dataPathParts, schemaPathParts, dataPointerPath) {
@@ -989,6 +999,7 @@ ValidatorContext.prototype.validateObjectRequiredProperties = function validateO
 	if (schema.required !== undefined) {
 		for (var i = 0; i < schema.required.length; i++) {
 			var key = schema.required[i];
+			this.handleRequired(key)
 			if (data[key] === undefined) {
 				var error = this.createError(ErrorCodes.OBJECT_REQUIRED, {key: key}, '', '/required/' + i, null, data, schema);
 				if (this.handleError(error)) {
@@ -1576,6 +1587,7 @@ function createApi(language) {
 			}
 			this.error = error;
 			this.missing = context.missing;
+			this.requireds = context.requireds;
 			this.valid = (error === null);
 
 			this.toString = function () {
@@ -1609,6 +1621,7 @@ function createApi(language) {
 			}
 			var result = {};
 			result.errors = context.errors;
+			result.requireds = context.requireds;
 			result.missing = context.missing;
 			result.valid = (result.errors.length === 0);
 			return result;
